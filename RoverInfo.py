@@ -6,14 +6,23 @@ class Vector:
         self.y1 = y1
 
 
+class Intersection:
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+
+
 class RoverInfo:
     def __init__(
             self, line_left: Vector = None, line_right: Vector = None,
             speed: float = 0, steer: float = 0, breaking: bool = False,
-            pixy=None,
+            pixy=None, intersection=None
     ):
+        if intersection is None:
+            intersection = []
         if pixy is None:
             pixy = []
+        self.intersections = intersection
         self.pixy = pixy
         self.line_left = line_left
         self.line_right = line_right

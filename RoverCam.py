@@ -2,7 +2,7 @@ import socket as sk
 import threading as th
 import tkinter as tk
 
-from RoverInfo import RoverInfo, Vector
+from RoverInfo import RoverInfo, Vector, Intersection
 
 SIMULATOR = 1
 
@@ -21,15 +21,17 @@ class RoverCam(tk.Tk):
     def __init__(self):
         super().__init__()
         self.connected = False
+        self.newData = False
 
+        self.protocol('WM_DELETE_WINDOW', self.exit)
         self.geometry(str(WIDTH * SCALE) + 'x' + str(HEIGHT * SCALE))
         self.minsize(width=WIDTH * SCALE, height=HEIGHT * SCALE)
         self.resizable(False, False)
 
-        self.canvas = tk.Canvas(self)
+        self.canvas = tk.Canvas(self, background='white')
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
-        self.connection = Connection(self.start_callback, self.stop_callback, self.draw_callback)
+        self.connection = Connection(self.start_callback, self.stop_callback)
         self.roverInfo = RoverInfo()
 
         self.draw_ui()
@@ -38,6 +40,7 @@ class RoverCam(tk.Tk):
 
     def draw_ui(self):
         self.canvas.delete('all')
+        self.roverInfo = self.connection.get_rover_info()
 
         for line in self.roverInfo.pixy:
             self.canvas.create_line(
@@ -46,6 +49,12 @@ class RoverCam(tk.Tk):
                 line.x1 * SCALE,
                 line.y1 * SCALE,
                 fill='grey', width=1
+            )
+
+            self.canvas.create_oval(
+                line.x1 * SCALE - 5, line.y1 * SCALE - 5,
+                line.x1 * SCALE + 5, line.y1 * SCALE + 5,
+                outline='black', fill='grey', width=1
             )
 
         if self.roverInfo.line_left is not None:
@@ -66,6 +75,20 @@ class RoverCam(tk.Tk):
                 fill='red', width=3
             )
 
+        for line in self.roverInfo.pixy:
+            self.canvas.create_text(
+                (line.x0 + line.x1) / 2 * SCALE, (line.y0 + line.y1) / 2 * SCALE, fill='black',
+                font=('American Typewriter', 20, ), text=str(self.roverInfo.pixy.index(line) + 1)
+            )
+
+        for intersection in self.roverInfo.intersections:
+            if intersection.x != 0 and intersection.y != 0:
+                self.canvas.create_oval(
+                    intersection.x * SCALE - 30, intersection.y * SCALE - 30,
+                    intersection.x * SCALE + 30, intersection.y * SCALE + 30,
+                    outline='gold', width=3
+                )
+
         if not self.connected:
             self.canvas.create_text(
                 WIDTH * SCALE / 2, HEIGHT * SCALE / 4,
@@ -73,37 +96,40 @@ class RoverCam(tk.Tk):
             )
 
         self.canvas.create_text(
-            10, 20, text='speed: ' + str("{:+.2f}".format(self.roverInfo.speed)), fill='blue', anchor='w', font=('Courier New', 20)
+            10, 20, text='speed: ' + str("{:+.2f}".format(self.roverInfo.speed)),
+            fill='blue', anchor='w', font=('Courier New', 20, 'bold')
         )
         self.canvas.create_text(
-            10, 40, text='steer: ' + str("{:+.2f}".format(self.roverInfo.steer)), fill='blue', anchor='w', font=('Courier New', 20)
+            10, 40, text='steer: ' + str("{:+.2f}".format(self.roverInfo.steer)),
+            fill='blue', anchor='w', font=('Courier New', 20, 'bold')
         )
 
         self.after(1000 // FPS, self.draw_ui)
 
+    def exit(self):
+        self.connection.stop()
+        self.connection.join()
+        self.destroy()
+
     def start_callback(self):
         self.connected = True
-        self.draw_ui()
 
     def stop_callback(self):
         self.connected = False
-        self.draw_ui()
-
-    def draw_callback(self):
-        self.roverInfo = self.connection.get_rover_info()
 
 
 class Connection(th.Thread):
-    def __init__(self, start_callback, stop_callback, draw_callback):
+    def __init__(self, start_callback, stop_callback):
         super().__init__()
         self.lock = th.Lock()
+        self.event = th.Event()
 
         self.start_callback = start_callback
         self.stop_callback = stop_callback
-        self.draw_callback = draw_callback
 
         self.socketfd = sk.socket(sk.AF_INET, sk.SOCK_STREAM)
         self.socketfd.bind((IP, PORT))
+        self.socketfd.settimeout(1)
         self.socketfd.listen(0)
 
         self.roverInfo = RoverInfo()
@@ -116,51 +142,58 @@ class Connection(th.Thread):
 
     def run(self):
         while True:
-            clientfd, _ = self.socketfd.accept()
-            self.start_callback()
-            while True:
-                data = clientfd.recv(4096)
+            try:
+                clientfd, _ = self.socketfd.accept()
+                self.start_callback()
+                while True:
+                    data = clientfd.recv(4096)
 
-                if not data:
+                    if not data:
+                        break
+
+                    rover_info = RoverInfo()
+                    lines = data.decode('ascii').split('\n')
+                    for line in lines:
+                        if line is not None:
+                            line_data = line.split(' ')
+                            if len(line_data) == 2:
+                                if line_data[0] == 'speed':
+                                    rover_info.speed = float(line_data[1])
+                                elif line_data[0] == 'steer':
+                                    rover_info.steer = float(line_data[1])
+                            elif len(line_data) == 6:
+                                if line_data[0] == 'v1':
+                                    if line_data[1] == '1' and len(line_data) == 6:
+                                        rover_info.line_left = Vector(
+                                            int(line_data[2]), int(line_data[3]), int(line_data[4]), int(line_data[5])
+                                        )
+                                    else:
+                                        rover_info.line_left = None
+                                elif line_data[0] == 'v2':
+                                    if line_data[1] == '1' and len(line_data) == 6:
+                                        rover_info.line_right = Vector(
+                                            int(line_data[2]), int(line_data[3]), int(line_data[4]), int(line_data[5])
+                                        )
+                                    else:
+                                        rover_info.line_right = None
+                            elif len(line_data) == 5 and line_data[0] == 'px':
+                                rover_info.pixy.append(Vector(
+                                    int(line_data[1]), int(line_data[2]), int(line_data[3]), int(line_data[4])
+                                ))
+                            elif len(line_data) == 3 and line_data[0] == 'i':
+                                rover_info.intersections.append(Intersection(int(line_data[1]), int(line_data[2])))
+
+                    self.lock.acquire()
+                    self.roverInfo = rover_info
+                    self.lock.release()
+
+                self.stop_callback()
+            except sk.timeout:
+                if self.event.is_set():
                     break
 
-                rover_info = RoverInfo()
-                lines = data.decode('ascii').split('\n')
-                for line in lines:
-                    if line is not None:
-                        line_data = line.split(' ')
-                        if len(line_data) == 2:
-                            if line_data[0] == 'speed':
-                                rover_info.speed = float(line_data[1])
-                            elif line_data[0] == 'steer':
-                                rover_info.steer = float(line_data[1])
-                        elif len(line_data) == 6:
-                            if line_data[0] == 'v1':
-                                if line_data[1] == '1' and len(line_data) == 6:
-                                    rover_info.line_left = Vector(
-                                        int(line_data[2]), int(line_data[3]), int(line_data[4]), int(line_data[5])
-                                    )
-                                else:
-                                    rover_info.line_left = None
-                            elif line_data[0] == 'v2':
-                                if line_data[1] == '1' and len(line_data) == 6:
-                                    rover_info.line_right = Vector(
-                                        int(line_data[2]), int(line_data[3]), int(line_data[4]), int(line_data[5])
-                                    )
-                                else:
-                                    rover_info.line_right = None
-                        elif len(line_data) == 5 and line_data[0] == 'px':
-                            rover_info.pixy.append(Vector(
-                                int(line_data[1]), int(line_data[2]), int(line_data[3]), int(line_data[4])
-                            ))
-
-                self.lock.acquire()
-                self.roverInfo = rover_info
-                self.lock.release()
-
-                self.draw_callback()
-
-            self.stop_callback()
+    def stop(self):
+        self.event.set()
 
 
 RoverCam().mainloop()
