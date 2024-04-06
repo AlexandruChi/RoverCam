@@ -1,6 +1,7 @@
 import socket as sk
 import threading as th
 import tkinter as tk
+import serial as sr
 
 from RoverInfo import RoverInfo, Vector
 
@@ -115,10 +116,13 @@ class Connection(th.Thread):
         self.start_callback = start_callback
         self.stop_callback = stop_callback
 
-        self.socketfd = sk.socket(sk.AF_INET, sk.SOCK_STREAM)
-        self.socketfd.bind((IP, PORT))
-        self.socketfd.settimeout(1)
-        self.socketfd.listen(0)
+        if SIMULATOR:
+            self.socketfd = sk.socket(sk.AF_INET, sk.SOCK_STREAM)
+            self.socketfd.bind((IP, PORT))
+            self.socketfd.settimeout(1)
+            self.socketfd.listen(0)
+        else:
+            self.serialConnection = sr.Serial("/dev/cu.HC-05-0", 9600)
 
         self.roverInfo = RoverInfo()
 
@@ -130,12 +134,20 @@ class Connection(th.Thread):
 
     def run(self):
         while True:
+            if self.event.is_set():
+                break
+
             try:
-                clientfd, _ = self.socketfd.accept()
+                clientfd = None
+                if SIMULATOR:
+                    clientfd, _ = self.socketfd.accept()
                 self.start_callback()
                 while True:
                     try:
-                        data = clientfd.recv(4096)
+                        if SIMULATOR:
+                            data = clientfd.recv(4096)
+                        else:
+                            data = self.serialConnection.read_all()
 
                         if not data:
                             break
@@ -185,8 +197,7 @@ class Connection(th.Thread):
 
                 self.stop_callback()
             except sk.timeout:
-                if self.event.is_set():
-                    break
+                pass
 
     def stop(self):
         self.event.set()
