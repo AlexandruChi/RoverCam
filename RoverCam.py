@@ -121,8 +121,6 @@ class Connection(th.Thread):
             self.socketfd.bind((IP, PORT))
             self.socketfd.settimeout(1)
             self.socketfd.listen(0)
-        else:
-            self.serialConnection = sr.Serial("/dev/cu.HC-05-0", 9600)
 
         self.roverInfo = RoverInfo()
 
@@ -147,7 +145,7 @@ class Connection(th.Thread):
                         if SIMULATOR:
                             data = clientfd.recv(4096)
                         else:
-                            data = self.serialConnection.read_all()
+                            data = input()
 
                         if not data:
                             break
