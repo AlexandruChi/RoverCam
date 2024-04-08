@@ -29,7 +29,7 @@ class RoverCam(tk.Tk):
         self.minsize(width=WIDTH * SCALE, height=HEIGHT * SCALE)
         self.resizable(False, False)
 
-        self.canvas = tk.Canvas(self, background='white')
+        self.canvas = tk.Canvas(self)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
         self.connection = Connection(self.start_callback, self.stop_callback)
