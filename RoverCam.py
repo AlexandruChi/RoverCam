@@ -1,11 +1,12 @@
 import socket as sk
 import threading as th
 import tkinter as tk
-import serial as sr
+import inputimeout as it
 
 from RoverInfo import RoverInfo, Vector
 
-SIMULATOR = 1
+MACOS = 0
+SIMULATOR = 0
 
 FPS = 30
 
@@ -15,7 +16,12 @@ PORT = 10001
 WIDTH = 78
 HEIGHT = 51
 
-SCALE = 8
+if MACOS:
+    SCALE = 8
+    TEXT_SIZE = 20
+else:
+    SCALE = 16
+    TEXT_SIZE = 10
 
 
 class RoverCam(tk.Tk):
@@ -57,7 +63,7 @@ class RoverCam(tk.Tk):
                 text += ' α=' + str(line.flags)
             self.canvas.create_text(
                 (line.x0 + line.x1) / 2 * SCALE, (line.y0 + line.y1) / 2 * SCALE, fill='black',
-                font=('American Typewriter', 20,), text=text
+                font=('American Typewriter', TEXT_SIZE,), text=text
             )
 
         if self.roverInfo.line_left is not None:
@@ -86,11 +92,11 @@ class RoverCam(tk.Tk):
 
         self.canvas.create_text(
             10, 20, text='speed: ' + str("{:+.2f}".format(self.roverInfo.speed)),
-            fill='blue', anchor='w', font=('Courier New', 20, 'bold')
+            fill='blue', anchor='w', font=('Courier New', TEXT_SIZE, 'bold')
         )
         self.canvas.create_text(
             10, 40, text='steer: ' + str("{:+.2f}".format(self.roverInfo.steer)),
-            fill='blue', anchor='w', font=('Courier New', 20, 'bold')
+            fill='blue', anchor='w', font=('Courier New', TEXT_SIZE, 'bold')
         )
 
         self.after(1000 // FPS, self.draw_ui)
@@ -131,6 +137,7 @@ class Connection(th.Thread):
         return rover_into
 
     def run(self):
+        rover_info = RoverInfo()
         while True:
             if self.event.is_set():
                 break
@@ -139,26 +146,30 @@ class Connection(th.Thread):
                 clientfd = None
                 if SIMULATOR:
                     clientfd, _ = self.socketfd.accept()
-                self.start_callback()
+                    self.start_callback()
                 while True:
                     try:
                         if SIMULATOR:
                             data = clientfd.recv(4096)
+                            strdata = data.decode('ascii')
                         else:
-                            data = input()
+                            strdata = it.inputimeout(timeout=1)
+                            self.start_callback()
 
-                        if not data:
+                        if not strdata:
                             break
 
-                        rover_info = RoverInfo()
-                        lines = data.decode('ascii').split('\n')
+                        if SIMULATOR:
+                            rover_info = RoverInfo()
+
+                        lines = strdata.split('\n')
                         for line in lines:
                             if line is not None:
                                 line_data = line.split(' ')
                                 if len(line_data) == 2:
-                                    if line_data[0] == 'speed':
+                                    if line_data[0] == 'sp':
                                         rover_info.speed = float(line_data[1])
-                                    elif line_data[0] == 'steer':
+                                    elif line_data[0] == 'st':
                                         rover_info.steer = float(line_data[1])
                                 elif len(line_data) == 6:
                                     if line_data[0] == 'v1':
@@ -186,6 +197,8 @@ class Connection(th.Thread):
                                     rover_info.pixy.append(Vector(
                                         int(line_data[1]), int(line_data[2]), int(line_data[3]), int(line_data[4])
                                     ))
+                                elif len(line_data) == 1 and line_data[0] == 'ps':
+                                    rover_info.pixy = []
 
                         self.lock.acquire()
                         self.roverInfo = rover_info
@@ -193,9 +206,11 @@ class Connection(th.Thread):
                     except ValueError:
                         pass
 
-                self.stop_callback()
             except sk.timeout:
-                pass
+                self.stop_callback()
+
+            except it.TimeoutOccurred:
+                self.stop_callback()
 
     def stop(self):
         self.event.set()
