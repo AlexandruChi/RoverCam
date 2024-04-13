@@ -2,13 +2,14 @@ import socket as sk
 import threading as th
 import tkinter as tk
 import inputimeout as it
+import time as tm
 
 from RoverInfo import RoverInfo, Vector
 
 MACOS = 0
 SIMULATOR = 0
 
-FPS = 30
+FPS = 60
 
 IP = '127.0.0.1'
 PORT = 10001
@@ -137,8 +138,9 @@ class Connection(th.Thread):
         return rover_into
 
     def run(self):
-        rover_info = RoverInfo()
         while True:
+            rover_info = RoverInfo()
+
             if self.event.is_set():
                 break
 
@@ -154,6 +156,7 @@ class Connection(th.Thread):
                             strdata = data.decode('ascii')
                         else:
                             strdata = it.inputimeout(timeout=1)
+                            # strdata = input()
                             self.start_callback()
 
                         if not strdata:
@@ -166,11 +169,17 @@ class Connection(th.Thread):
                         for line in lines:
                             if line is not None:
                                 line_data = line.split(' ')
-                                if len(line_data) == 2:
+                                if line == 'pe':
+                                    rover_info.pixy.clear()
+                                elif len(line_data) == 2:
                                     if line_data[0] == 'sp':
                                         rover_info.speed = float(line_data[1])
                                     elif line_data[0] == 'st':
                                         rover_info.steer = float(line_data[1])
+                                    elif line_data[0] == 'v1':
+                                        rover_info.line_left = None
+                                    elif line_data[0] == 'v2':
+                                        rover_info.line_right = None
                                 elif len(line_data) == 6:
                                     if line_data[0] == 'v1':
                                         if line_data[1] == '1' and len(line_data) == 6:
@@ -178,27 +187,16 @@ class Connection(th.Thread):
                                                 int(line_data[2]), int(line_data[3]),
                                                 int(line_data[4]), int(line_data[5])
                                             )
-                                        else:
-                                            rover_info.line_left = None
                                     elif line_data[0] == 'v2':
                                         if line_data[1] == '1' and len(line_data) == 6:
                                             rover_info.line_right = Vector(
                                                 int(line_data[2]), int(line_data[3]),
                                                 int(line_data[4]), int(line_data[5])
                                             )
-                                        else:
-                                            rover_info.line_right = None
-                                    elif line_data[0] == 'px':
-                                        rover_info.pixy.append(Vector(
-                                            int(line_data[1]), int(line_data[2]), int(line_data[3]),
-                                            int(line_data[4]), int(line_data[5])
-                                        ))
                                 elif len(line_data) == 5 and line_data[0] == 'px':
                                     rover_info.pixy.append(Vector(
                                         int(line_data[1]), int(line_data[2]), int(line_data[3]), int(line_data[4])
                                     ))
-                                elif len(line_data) == 1 and line_data[0] == 'ps':
-                                    rover_info.pixy = []
 
                         self.lock.acquire()
                         self.roverInfo = rover_info
