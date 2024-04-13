@@ -1,18 +1,13 @@
-import socket as sk
 import threading as th
 import tkinter as tk
+import copy as cp
 import inputimeout as it
-import time as tm
 
 from RoverInfo import RoverInfo, Vector
 
 MACOS = 0
-SIMULATOR = 0
 
 FPS = 60
-
-IP = '127.0.0.1'
-PORT = 10001
 
 WIDTH = 78
 HEIGHT = 51
@@ -24,14 +19,10 @@ else:
     SCALE = 16
     TEXT_SIZE = 10
 
-
 class RoverCam(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.connected = False
-        self.newData = False
 
-        self.protocol('WM_DELETE_WINDOW', self.exit)
         self.geometry(str(WIDTH * SCALE) + 'x' + str(HEIGHT * SCALE))
         self.minsize(width=WIDTH * SCALE, height=HEIGHT * SCALE)
         self.resizable(False, False)
@@ -39,7 +30,7 @@ class RoverCam(tk.Tk):
         self.canvas = tk.Canvas(self)
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
-        self.connection = Connection(self.start_callback, self.stop_callback)
+        self.connection = Connection()
         self.roverInfo = RoverInfo()
 
         self.draw_ui()
@@ -85,12 +76,6 @@ class RoverCam(tk.Tk):
                 fill='red', width=3
             )
 
-        if not self.connected:
-            self.canvas.create_text(
-                WIDTH * SCALE / 2, HEIGHT * SCALE / 4,
-                text='NO CONNECTION!', fill='red', font=('Charter', 30)
-            )
-
         self.canvas.create_text(
             10, 20, text='speed: ' + str("{:+.2f}".format(self.roverInfo.speed)),
             fill='blue', anchor='w', font=('Courier New', TEXT_SIZE, 'bold')
@@ -102,116 +87,77 @@ class RoverCam(tk.Tk):
 
         self.after(1000 // FPS, self.draw_ui)
 
-    def exit(self):
-        self.connection.stop()
-        self.connection.join()
-        self.destroy()
-
-    def start_callback(self):
-        self.connected = True
-
-    def stop_callback(self):
-        self.connected = False
-
 
 class Connection(th.Thread):
-    def __init__(self, start_callback, stop_callback):
+    def __init__(self):
         super().__init__()
         self.lock = th.Lock()
         self.event = th.Event()
-
-        self.start_callback = start_callback
-        self.stop_callback = stop_callback
-
-        if SIMULATOR:
-            self.socketfd = sk.socket(sk.AF_INET, sk.SOCK_STREAM)
-            self.socketfd.bind((IP, PORT))
-            self.socketfd.settimeout(1)
-            self.socketfd.listen(0)
 
         self.roverInfo = RoverInfo()
 
     def get_rover_info(self):
         self.lock.acquire()
-        rover_into = self.roverInfo
+        rover_into = cp.deepcopy(self.roverInfo)
         self.lock.release()
         return rover_into
 
+    def set_rover_info(self, rover_info):
+        self.lock.acquire()
+        self.roverInfo = cp.deepcopy(rover_info)
+        self.lock.release()
+
     def run(self):
         while True:
-            rover_info = RoverInfo()
-
-            if self.event.is_set():
-                break
-
             try:
-                clientfd = None
-                if SIMULATOR:
-                    clientfd, _ = self.socketfd.accept()
-                    self.start_callback()
+                rover_info = RoverInfo()
                 while True:
-                    try:
-                        if SIMULATOR:
-                            data = clientfd.recv(4096)
-                            strdata = data.decode('ascii')
-                        else:
-                            strdata = it.inputimeout(timeout=1)
-                            # strdata = input()
-                            self.start_callback()
+                    values = it.inputimeout(timeout=0.1).split(' ')
 
-                        if not strdata:
-                            break
+                    print(values)
 
-                        if SIMULATOR:
-                            rover_info = RoverInfo()
+                    match values[0]:
+                        case 'c':
+                            control = values[1].split('/')
+                            rover_info.speed = float(control[0])
+                            rover_info.steer = float(control[1])
 
-                        lines = strdata.split('\n')
-                        for line in lines:
-                            if line is not None:
-                                line_data = line.split(' ')
-                                if line == 'pe':
-                                    rover_info.pixy.clear()
-                                elif len(line_data) == 2:
-                                    if line_data[0] == 'sp':
-                                        rover_info.speed = float(line_data[1])
-                                    elif line_data[0] == 'st':
-                                        rover_info.steer = float(line_data[1])
-                                    elif line_data[0] == 'v1':
-                                        rover_info.line_left = None
-                                    elif line_data[0] == 'v2':
-                                        rover_info.line_right = None
-                                elif len(line_data) == 6:
-                                    if line_data[0] == 'v1':
-                                        if line_data[1] == '1' and len(line_data) == 6:
-                                            rover_info.line_left = Vector(
-                                                int(line_data[2]), int(line_data[3]),
-                                                int(line_data[4]), int(line_data[5])
-                                            )
-                                    elif line_data[0] == 'v2':
-                                        if line_data[1] == '1' and len(line_data) == 6:
-                                            rover_info.line_right = Vector(
-                                                int(line_data[2]), int(line_data[3]),
-                                                int(line_data[4]), int(line_data[5])
-                                            )
-                                elif len(line_data) == 5 and line_data[0] == 'px':
-                                    rover_info.pixy.append(Vector(
-                                        int(line_data[1]), int(line_data[2]), int(line_data[3]), int(line_data[4])
-                                    ))
+                        case 'v':
+                            rover_info.line_left = None
+                            rover_info.line_right = None
 
-                        self.lock.acquire()
-                        self.roverInfo = rover_info
-                        self.lock.release()
-                    except ValueError:
-                        pass
+                            try:
+                                points = values[1].split('/')
+                                rover_info.line_left = Vector(
+                                    int(points[0]), int(points[1]), int(points[2]), int(points[3])
+                                )
 
-            except sk.timeout:
-                self.stop_callback()
+                                points = values[2].split('/')
+                                rover_info.line_right = Vector(
+                                    int(points[0]), int(points[1]), int(points[2]), int(points[3])
+                                )
+
+                            except IndexError:
+                                pass
+
+                        case 'p':
+                            rover_info.pixy = []
+
+                            if len(values) > 1:
+                                for line in values[1:]:
+                                    points = line.split('/')
+
+                                    rover_info.pixy.append(
+                                        Vector(int(points[0]), int(points[1]), int(points[2]), int(points[3]))
+                                    )
+
+                    self.set_rover_info(rover_info)
 
             except it.TimeoutOccurred:
-                self.stop_callback()
+                pass
 
-    def stop(self):
-        self.event.set()
+            except ValueError:
+                pass
 
 
 RoverCam().mainloop()
