@@ -15,7 +15,7 @@ class Intersection:
 
 class RoverInfo:
     def __init__(
-            self, line_left: Vector = None, line_right: Vector = None,
+            self, line_left=None, line_right=None,
             speed: float = 0, steer: float = 0, breaking: bool = False,
             pixy=None
     ):

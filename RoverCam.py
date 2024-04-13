@@ -112,9 +112,7 @@ class Connection(th.Thread):
             try:
                 rover_info = RoverInfo()
                 while True:
-                    values = it.inputimeout(timeout=0.1).split(' ')
-
-                    print(values)
+                    values = it.inputimeout(timeout=0.1).strip().split(' ')
 
                     match values[0]:
                         case 'c':
