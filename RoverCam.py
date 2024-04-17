@@ -102,7 +102,7 @@ class RoverCam(tk.Tk):
 
         self.canvas.create_text(
             WIDTH * SCALE - 10, 20, text='BRAKE',
-            fill=colour, anchor='e', font=('Courier New', TEXT_SIZE * 3, 'bold')
+            fill=colour, anchor='ne', font=('Courier New', TEXT_SIZE * 3, 'bold')
         )
 
         self.after(1000 // FPS, self.draw_ui)
