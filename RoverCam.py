@@ -132,7 +132,8 @@ class Connection(th.Thread):
             try:
                 rover_info = RoverInfo()
                 while True:
-                    values = it.inputimeout(timeout=0.1).strip().split(' ')
+                    input_string = it.inputimeout(timeout=0.1).strip()
+                    values = input_string.split(' ')
 
                     match values[0]:
                         case 'c':
@@ -186,6 +187,9 @@ class Connection(th.Thread):
                             if len(values) > 1:
                                 if values[1] == '1':
                                     rover_info.braking = True
+
+                        case 'l':
+                            print(input_string[2:])
 
                     self.set_rover_info(rover_info)
 
