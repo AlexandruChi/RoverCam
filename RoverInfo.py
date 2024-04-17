@@ -15,8 +15,8 @@ class Intersection:
 
 class RoverInfo:
     def __init__(
-            self, line_left=None, line_right=None,
-            speed: float = 0, steer: float = 0, breaking: bool = False,
+            self, line_left=None, line_right=None, center_line=None,
+            speed: float = 0, steer: float = 0, braking: bool = False,
             pixy=None
     ):
         if pixy is None:
@@ -26,4 +26,5 @@ class RoverInfo:
         self.line_right = line_right
         self.speed = speed
         self.steer = steer
-        self.breaking = breaking
+        self.braking = braking
+        self.center_line = center_line
