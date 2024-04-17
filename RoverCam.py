@@ -189,7 +189,8 @@ class Connection(th.Thread):
                                     rover_info.braking = True
 
                         case 'l':
-                            print(input_string[2:])
+                            if len(input_string) > 2:
+                                print(input_string[2:])
 
                     self.set_rover_info(rover_info)
 
