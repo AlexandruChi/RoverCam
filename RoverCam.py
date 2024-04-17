@@ -19,6 +19,7 @@ else:
     SCALE = 32
     TEXT_SIZE = 10
 
+
 class RoverCam(tk.Tk):
     def __init__(self):
         super().__init__()
