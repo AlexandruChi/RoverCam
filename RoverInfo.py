@@ -17,7 +17,7 @@ class RoverInfo:
     def __init__(
             self, line_left=None, line_right=None, center_line=None,
             speed: float = 0, steer: float = 0, braking: bool = False,
-            pixy=None
+            pixy=None, info=None
     ):
         if pixy is None:
             pixy = []
@@ -28,3 +28,4 @@ class RoverInfo:
         self.steer = steer
         self.braking = braking
         self.center_line = center_line
+        self.info = info

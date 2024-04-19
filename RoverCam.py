@@ -105,6 +105,12 @@ class RoverCam(tk.Tk):
             fill=colour, anchor='ne', font=('Courier New', TEXT_SIZE * 3, 'bold')
         )
 
+        if self.roverInfo.info is not None:
+            self.canvas.create_text(
+                20, HEIGHT * SCALE - 20, text=self.roverInfo.info,
+                fill="black", anchor='sw', font=('Courier New', TEXT_SIZE, 'bold')
+            )
+
         self.after(1000 // FPS, self.draw_ui)
 
 
@@ -191,6 +197,12 @@ class Connection(th.Thread):
                         case 'l':
                             if len(input_string) > 2:
                                 print(input_string[2:])
+
+                        case 'i':
+                            rover_info.info = None
+
+                            if len(input_string) > 2:
+                                rover_info.info = input_string[2:]
 
                     self.set_rover_info(rover_info)
 
