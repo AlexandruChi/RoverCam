@@ -1,7 +1,7 @@
+import inputimeout as it
 import threading as th
 import tkinter as tk
 import copy as cp
-import inputimeout as it
 
 from RoverInfo import RoverInfo, Vector
 
@@ -24,6 +24,8 @@ class RoverCam(tk.Tk):
     def __init__(self):
         super().__init__()
 
+        self.protocol("WM_DELETE_WINDOW", self.close)
+
         self.geometry(str(WIDTH * SCALE) + 'x' + str(HEIGHT * SCALE))
         self.minsize(width=WIDTH * SCALE, height=HEIGHT * SCALE)
         self.resizable(False, False)
@@ -37,6 +39,10 @@ class RoverCam(tk.Tk):
         self.draw_ui()
 
         self.connection.start()
+
+    def close(self):
+        self.connection.stop()
+        self.destroy()
 
     def draw_ui(self):
         self.canvas.delete('all')
@@ -101,7 +107,7 @@ class RoverCam(tk.Tk):
             colour = 'grey'
 
         self.canvas.create_text(
-            WIDTH * SCALE - 20, 20, text='BRAKE',
+            WIDTH * SCALE - 20, 15, text='BRAKE',
             fill=colour, anchor='ne', font=('Courier New', TEXT_SIZE * 3, 'bold')
         )
 
@@ -109,6 +115,12 @@ class RoverCam(tk.Tk):
             self.canvas.create_text(
                 20, HEIGHT * SCALE - 20, text=self.roverInfo.info,
                 fill="black", anchor='sw', font=('Courier New', TEXT_SIZE, 'bold')
+            )
+
+        if not self.connection.connected.is_set():
+            self.canvas.create_text(
+                WIDTH * SCALE / 2, HEIGHT * SCALE / 4,
+                text='NO CONNECTION!', fill='red', font=('Charter', 30)
             )
 
         self.after(1000 // FPS, self.draw_ui)
@@ -119,6 +131,8 @@ class Connection(th.Thread):
         super().__init__()
         self.lock = th.Lock()
         self.event = th.Event()
+
+        self.connected = th.Event()
 
         self.roverInfo = RoverInfo()
 
@@ -133,84 +147,105 @@ class Connection(th.Thread):
         self.roverInfo = cp.deepcopy(rover_info)
         self.lock.release()
 
+    def stop(self):
+        self.event.set()
+        self.join()
+
     def run(self):
         while True:
+            if self.event.is_set():
+                break
+
             try:
                 rover_info = RoverInfo()
                 while True:
-                    input_string = it.inputimeout(timeout=0.1).strip()
-                    values = input_string.split(' ')
+                    if self.event.is_set():
+                        break
 
-                    match values[0]:
-                        case 'c':
-                            control = values[1].split('/')
-                            rover_info.speed = float(control[0])
-                            rover_info.steer = float(control[1])
+                    try:
+                        input_string = it.inputimeout(timeout=1).strip()
+                        values = input_string.split(' ')
 
-                        case 'v':
-                            rover_info.line_left = None
-                            rover_info.line_right = None
+                        self.connected.set()
 
-                            try:
-                                points = values[1].split('/')
-                                rover_info.line_left = Vector(
-                                    int(points[0]), int(points[1]), int(points[2]), int(points[3])
-                                )
+                        match values[0]:
+                            case 'c':
+                                control = values[1].split('/')
+                                rover_info.speed = float(control[0])
+                                rover_info.steer = float(control[1])
 
-                                points = values[2].split('/')
-                                rover_info.line_right = Vector(
-                                    int(points[0]), int(points[1]), int(points[2]), int(points[3])
-                                )
+                            case 'v':
+                                rover_info.line_left = None
+                                rover_info.line_right = None
 
-                            except IndexError:
-                                pass
-
-                        case 'm':
-                            rover_info.center_line = None
-
-                            try:
-                                points = values[1].split('/')
-                                rover_info.center_line = Vector(
-                                    int(points[0]), int(points[1]), int(points[2]), int(points[3])
-                                )
-                            except IndexError:
-                                pass
-
-                        case 'p':
-                            rover_info.pixy = []
-
-                            if len(values) > 1:
-                                for line in values[1:]:
-                                    points = line.split('/')
-
-                                    rover_info.pixy.append(
-                                        Vector(int(points[0]), int(points[1]), int(points[2]), int(points[3]))
+                                try:
+                                    points = values[1].split('/')
+                                    rover_info.line_left = Vector(
+                                        int(points[0]), int(points[1]), int(points[2]), int(points[3])
                                     )
 
-                        case 'b':
-                            rover_info.braking = False
+                                    points = values[2].split('/')
+                                    rover_info.line_right = Vector(
+                                        int(points[0]), int(points[1]), int(points[2]), int(points[3])
+                                    )
 
-                            if len(values) > 1:
-                                if values[1] == '1':
-                                    rover_info.braking = True
+                                except IndexError:
+                                    pass
 
-                        case 'l':
-                            if len(input_string) > 2:
-                                print(input_string[2:])
+                            case 'm':
+                                rover_info.center_line = None
 
-                        case 'i':
-                            rover_info.info = None
+                                try:
+                                    points = values[1].split('/')
+                                    rover_info.center_line = Vector(
+                                        int(points[0]), int(points[1]), int(points[2]), int(points[3])
+                                    )
+                                except IndexError:
+                                    pass
 
-                            if len(input_string) > 2:
-                                rover_info.info = input_string[2:]
+                            case 'p':
+                                rover_info.pixy = []
 
-                    self.set_rover_info(rover_info)
+                                if len(values) > 1:
+                                    for line in values[1:]:
+                                        points = line.split('/')
+
+                                        rover_info.pixy.append(
+                                            Vector(int(points[0]), int(points[1]), int(points[2]), int(points[3]))
+                                        )
+
+                            case 'b':
+                                rover_info.braking = False
+
+                                if len(values) > 1:
+                                    if values[1] == '1':
+                                        rover_info.braking = True
+
+                            case 'l':
+                                if len(input_string) > 2:
+                                    print(input_string[2:])
+
+                            case 'i':
+                                rover_info.info = None
+
+                                if len(input_string) > 2:
+                                    rover_info.info = input_string[2:]
+
+                        self.set_rover_info(rover_info)
+
+                    except ValueError:
+                        pass
 
             except it.TimeoutOccurred:
-                pass
+                self.connected.clear()
 
-            except ValueError:
-                pass
+            except EOFError:
+                self.connected.clear()
 
 
-RoverCam().mainloop()
+rover_cam = RoverCam()
+
+try:
+    rover_cam.mainloop()
+except KeyboardInterrupt:
+    rover_cam.close()
