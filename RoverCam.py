@@ -101,13 +101,25 @@ class RoverCam(tk.Tk):
             fill='blue', anchor='w', font=('Courier New', TEXT_SIZE, 'bold')
         )
 
+        if self.roverInfo.distance == 0:
+            colour = 'gray'
+        elif self.roverInfo.distance < 1:
+            colour = 'red'
+        else:
+            colour = 'blue'
+
+        self.canvas.create_text(
+            10, 100, text='distance: ' + str("{:.2f}".format(self.roverInfo.distance)),
+            fill=colour, anchor='w', font=('Courier New', TEXT_SIZE, 'bold')
+        )
+
         if self.roverInfo.braking:
             colour = 'red'
         else:
             colour = 'grey'
 
         self.canvas.create_text(
-            WIDTH * SCALE - 20, 15, text='BRAKE',
+            WIDTH * SCALE - 20, 10, text='BRAKE',
             fill=colour, anchor='ne', font=('Courier New', TEXT_SIZE * 3, 'bold')
         )
 
@@ -230,6 +242,9 @@ class Connection(th.Thread):
 
                                 if len(input_string) > 2:
                                     rover_info.info = input_string[2:]
+
+                            case 'd':
+                                rover_info.distance = float(values[1])
 
                         self.set_rover_info(rover_info)
 
