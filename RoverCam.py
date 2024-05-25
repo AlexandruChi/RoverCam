@@ -132,7 +132,7 @@ class RoverCam(tk.Tk):
         if not self.connection.connected.is_set():
             self.canvas.create_text(
                 WIDTH * SCALE / 2, HEIGHT * SCALE / 4,
-                text='NO CONNECTION!', fill='red', font=('Charter', 30)
+                text='NO CONNECTION!', fill='red', font=('Times New Roman', 30)
             )
 
         self.after(1000 // FPS, self.draw_ui)
