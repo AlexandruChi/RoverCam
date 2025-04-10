@@ -16,7 +16,7 @@ if MACOS:
     SCALE = 8
     TEXT_SIZE = 20
 else:
-    SCALE = 32
+    SCALE = 15
     TEXT_SIZE = 10
 
 
@@ -251,11 +251,16 @@ class Connection(th.Thread):
                     except ValueError:
                         pass
 
+                    except IndexError:
+                        pass
+
             except it.TimeoutOccurred:
                 self.connected.clear()
+                break
 
             except EOFError:
                 self.connected.clear()
+                break
 
 
 rover_cam = RoverCam()
