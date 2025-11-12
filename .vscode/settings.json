@@ -1,8 +1,12 @@
 {
     "cSpell.words": [
-        "inputimeout",
-        "pixy",
-        "pycache",
-        "venv"
+        "baudrate",
+        "columnspan",
+        "highlightthickness",
+        "nsew",
+        "padx",
+        "pady",
+        "textvariable",
+        "ttys"
     ]
 }
