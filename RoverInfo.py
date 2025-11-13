@@ -10,7 +10,7 @@ class RoverInfo:
     def __init__(
             self, line_left=None, line_right=None, center_line=None,
             speed: float = 0, steer: float = 0, braking: bool = False,
-            lines=None, variables=None, distance: float = 0
+            lines=None, variables=None, distance: float = 0, gear: int = 0
     ):
         self.lines = [] if lines is None else list(lines)
         self.line_left = line_left
@@ -22,5 +22,6 @@ class RoverInfo:
 
         self.braking = braking
         self.distance = distance
+        self.gear = gear
 
-        self.variables = variables
+        self.variables = 'variables'

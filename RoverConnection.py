@@ -1,5 +1,6 @@
 import threading as th
 import time
+import queue
 import serial as sr
 from copy import deepcopy
 from RoverInfo import RoverInfo, Line
@@ -17,6 +18,7 @@ class RoverConnection(th.Thread):
 
         self.roverInfo = RoverInfo()
         self.serial = None
+        self._send_queue = queue.Queue()
         self.start()
 
     def get_rover_info(self):
@@ -32,6 +34,9 @@ class RoverConnection(th.Thread):
     def connected(self):
         return self.is_connected.is_set()
 
+    def send(self, data):
+        self._send_queue.put(data)
+
     def stop(self):
         self.event.set()
         self.join()
@@ -46,6 +51,26 @@ class RoverConnection(th.Thread):
                     rover_info = RoverInfo()
 
                     while not self.event.is_set():
+
+                        try:
+                            while not self.event.is_set():
+                                data = self._send_queue.get_nowait()
+                                try:
+                                    self.serial.write(bytes(data))
+                                    try:
+                                        self.serial.flush()
+                                    except Exception:
+                                        pass
+
+                                except sr.SerialException:
+                                    self.is_connected.clear()
+                                    raise
+
+                                except Exception:
+                                    pass
+
+                        except queue.Empty:
+                            pass
 
                         while not self.event.is_set():
                             data = self.serial.readline().decode('utf-8').strip()

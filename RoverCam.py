@@ -91,11 +91,11 @@ class RoverCam(tk.Toplevel):
             )
 
         self.canvas.create_text(
-            10, 20, text='speed: ' + str("{:+.2f}".format(self.roverInfo.speed)),
+            self.text_size // 2, self.text_size, text='speed: ' + str("{:+.2f}".format(self.roverInfo.speed)),
             fill='blue', anchor='w', font=('Courier New', self.text_size, 'bold')
         )
         self.canvas.create_text(
-            10, 40, text='steer: ' + str("{:+.2f}".format(self.roverInfo.steer)),
+            self.text_size // 2, self.text_size * 2, text='steer: ' + str("{:+.2f}".format(self.roverInfo.steer)),
             fill='blue', anchor='w', font=('Courier New', self.text_size, 'bold')
         )
 
@@ -107,7 +107,7 @@ class RoverCam(tk.Toplevel):
             colour = 'blue'
 
         self.canvas.create_text(
-            10, 100, text='distance: ' + str("{:.2f}".format(self.roverInfo.distance)),
+            self.text_size // 2, self.text_size * 5, text='distance: ' + str("{:.2f}".format(self.roverInfo.distance)),
             fill=colour, anchor='w', font=('Courier New', self.text_size, 'bold')
         )
 
@@ -117,15 +117,30 @@ class RoverCam(tk.Toplevel):
             colour = 'grey'
 
         self.canvas.create_text(
-            WIDTH * self.scale - 15, 10, text='BRAKE',
+            WIDTH * self.scale - self.text_size // 2, self.text_size // 2, text='BRAKE',
             fill=colour, anchor='ne', font=('Courier New', self.text_size * 3, 'bold')
         )
 
         if self.roverInfo.variables is not None:
             self.canvas.create_text(
-                20, HEIGHT * self.scale - 20, text=self.roverInfo.variables,
+                self.text_size, HEIGHT * self.scale - self.text_size // 2, text=self.roverInfo.variables,
                 fill="black", anchor='sw', font=('Courier New', self.text_size, 'bold')
             )
+
+        self.canvas.create_text(
+            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - self.text_size * 3, text='N',
+            fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
+        )
+
+        self.canvas.create_text(
+            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - int(self.text_size * 1.5), text='D',
+            fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
+        )
+
+        self.canvas.create_text(
+            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale, text='B',
+            fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
+        )
 
         if not self.connected() if self.connected else False:
             self.canvas.create_text(
