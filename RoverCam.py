@@ -121,21 +121,56 @@ class RoverCam(tk.Toplevel):
             fill=colour, anchor='ne', font=('Courier New', self.text_size * 3, 'bold')
         )
 
-        if self.roverInfo.variables is not None:
+        if self.roverInfo.text is not None:
             self.canvas.create_text(
-                self.text_size, HEIGHT * self.scale - self.text_size // 2, text=self.roverInfo.variables,
+                self.text_size, HEIGHT * self.scale - self.text_size // 2, text=self.roverInfo.text,
                 fill="black", anchor='sw', font=('Courier New', self.text_size, 'bold')
             )
 
+        if self.roverInfo.gear == 'R':
+            colour = 'red'
+        else:
+            colour = 'grey'
+
         self.canvas.create_text(
-            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - self.text_size * 3, text='N',
+            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - self.text_size * 6, text='R',
             fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
         )
 
+        if self.roverInfo.gear == 'N':
+            colour = 'red'
+        else:
+            colour = 'grey'
+
         self.canvas.create_text(
-            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - int(self.text_size * 1.5), text='D',
+            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - int(self.text_size * 4.5), text='N',
             fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
         )
+
+        if self.roverInfo.gear == 'D':
+            colour = 'red'
+        else:
+            colour = 'grey'
+
+        self.canvas.create_text(
+            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - self.text_size * 3, text='D',
+            fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
+        )
+
+        if self.roverInfo.gear == 'M':
+            colour = 'red'
+        else:
+            colour = 'grey'
+
+        self.canvas.create_text(
+            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - int(self.text_size * 1.5), text='M',
+            fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
+        )
+
+        if self.roverInfo.gear == 'B':
+            colour = 'red'
+        else:
+            colour = 'grey'
 
         self.canvas.create_text(
             WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale, text='B',
@@ -147,5 +182,33 @@ class RoverCam(tk.Toplevel):
                 WIDTH * self.scale / 2, HEIGHT * self.scale / 3,
                 text='NO CONNECTION!', fill='red', font=('Times New Roman', 70)
             )
+
+        match self.roverInfo.battery_warning:
+            case 0: # BATTERY_WARNING_NONE
+                pass
+
+            case 1: # BATTERY_WARNING_LOW
+                self.canvas.create_text(
+                    WIDTH * self.scale / 2, HEIGHT * self.scale / 8,
+                    text='BATTERY LOW', fill="#D9DC00", font=('Times New Roman', 50)
+                )
+
+            case 2: # BATTERY_WARNING_CRITICAL
+                self.canvas.create_text(
+                    WIDTH * self.scale / 2, HEIGHT * self.scale / 8,
+                    text='BATTERY CRITICAL!', fill='orange', font=('Times New Roman', 50)
+                )
+
+            case 3: # BATTERY_WARNING_EMERGENCY
+                self.canvas.create_text(
+                    WIDTH * self.scale / 2, HEIGHT * self.scale / 8,
+                    text='!!! BATTERY EMERGENCY !!!', fill='red', font=('Times New Roman', 50)
+                )
+
+            case 4: # BATTERY_WARNING_FAILED
+                self.canvas.create_text(
+                    WIDTH * self.scale / 2, HEIGHT * self.scale / 8,
+                    text='!!!!! BATTERY FAILED !!!!!', fill='#FF00FF', font=('Times New Roman', 50)
+                )
 
         self.after(1000 // FPS, self.draw_ui)

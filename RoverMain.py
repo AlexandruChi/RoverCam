@@ -4,6 +4,7 @@ from SerialPorts import SerialPorts
 from RoverCam import RoverCam
 from RoverCommand import RoverCommand
 import sys
+import signal
 
 if False:
     # Custom window size
@@ -30,6 +31,9 @@ commands = {
     'D': [b'nxpcup_work d\n',],
     'B': [b'nxpcup_work b\n',],
 }
+
+# Call window.close() on Ctrl + C
+signal.signal(signal.SIGINT, lambda s, f: window.after(0, window.close) if window is not None else None)
 
 def on_select(port, baud):
     global connection

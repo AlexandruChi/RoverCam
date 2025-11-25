@@ -18,7 +18,12 @@ class RoverConnection(th.Thread):
 
         self.roverInfo = RoverInfo()
         self.serial = None
+
         self._send_queue = queue.Queue()
+        self._recv_queue = queue.Queue()
+
+        self._error_queue = queue.Queue()
+
         self.start()
 
     def get_rover_info(self):
@@ -36,6 +41,13 @@ class RoverConnection(th.Thread):
 
     def send(self, data):
         self._send_queue.put(data)
+
+    def recv(self):
+        try:
+            data = self._recv_queue.get_nowait()
+            return data
+        except queue.Empty:
+            return None
 
     def stop(self):
         self.event.set()
@@ -77,77 +89,152 @@ class RoverConnection(th.Thread):
                             if not data:
                                 break
 
-                            print(data)
+                            if data[:5] != 'rvrcm':
+                                self._recv_queue.put(data)
+                                continue
 
-                            values = data.split(' ')
-                            match values[0]:
-                                case 'c':
-                                    control = values[1].split('/')
-                                    rover_info.speed = float(control[0])
-                                    rover_info.steer = float(control[1])
+                            command = data.split('|')
+                            if (len(command) != 3 or command[0] != 'rvrcm'):
+                                self._error_queue.put(f'rvrcm format error ({data})')
+                                continue
 
-                                case 'v':
-                                    rover_info.line_left = None
-                                    rover_info.line_right = None
+                            match command[1]:
+                                case 'gui':
 
-                                    try:
-                                        points = values[1].split('/')
-                                        rover_info.line_left = Line(
-                                            int(points[0]), int(points[1]), int(points[2]), int(points[3])
-                                        )
+                                    gui_data = command[2]
+                                    values = gui_data.split(' ')
 
-                                        points = values[2].split('/')
-                                        rover_info.line_right = Line(
-                                            int(points[0]), int(points[1]), int(points[2]), int(points[3])
-                                        )
+                                    if len(values[0]) != 1:
+                                        self._error_queue.put(f'rvrcm gui format error ({data})')
+                                        continue
 
-                                    except IndexError:
-                                        pass
+                                    match values[0]:
+                                        case 'c':
+                                            rover_info.gear = None
+                                            rover_info.braking = False
+                                            rover_info.speed = 0.0
+                                            rover_info.steer = 0.0
 
-                                case 'm':
-                                    rover_info.center_line = None
+                                            if len(values) > 2:
+                                                self._error_queue.put(f'rvrcm gui control [c] format error ({data})')
+                                                continue
 
-                                    try:
-                                        points = values[1].split('/')
-                                        rover_info.center_line = Line(
-                                            int(points[0]), int(points[1]), int(points[2]), int(points[3])
-                                        )
-                                    except IndexError:
-                                        pass
+                                            try:
+                                                control = values[1].split('/')
 
-                                case 'p':
-                                    rover_info.lines = []
+                                                if len(control) != 4:
+                                                    self._error_queue.put(f'rvrcm gui control [c] format error ({data})')
+                                                    continue
 
-                                    if len(values) > 1:
-                                        for line in values[1:]:
-                                            points = line.split('/')
+                                                rover_info.gear = control[0]
+                                                rover_info.braking = control[1] == '1'
+                                                rover_info.speed = float(control[2])
+                                                rover_info.steer = float(control[3])
+                                            except IndexError:
+                                                pass
 
-                                            rover_info.lines.append(
-                                                Line(int(points[0]), int(points[1]), int(points[2]), int(points[3]))
-                                            )
+                                        case 'l':
+                                            rover_info.line_left = None
+                                            rover_info.line_right = None
 
-                                case 'b':
-                                    rover_info.braking = False
+                                            if len(values) > 3:
+                                                self._error_queue.put(f'rvrcm gui lines [l] format error ({data})')
+                                                continue
 
-                                    if len(values) > 1:
-                                        if values[1] == '1':
-                                            rover_info.braking = True
+                                            try:
+                                                points = values[1].split('/')
+                                                rover_info.line_left = Line(
+                                                    int(points[0]), int(points[1]), int(points[2]), int(points[3])
+                                                )
 
-                                case 'l':
-                                    if len(data) > 2:
-                                        print(data[2:])
+                                                points = values[2].split('/')
+                                                rover_info.line_right = Line(
+                                                    int(points[0]), int(points[1]), int(points[2]), int(points[3])
+                                                )
 
-                                case 'i':
-                                    rover_info.variables = None
+                                            except IndexError:
+                                                pass
 
-                                    if len(data) > 2:
-                                        rover_info.variables = data[2:]
+                                        case 'm':
+                                            rover_info.center_line = None
 
-                                case 'd':
-                                    if len(values) > 1:
-                                        rover_info.distance = float(values[1])
+                                            if len(values) > 2:
+                                                self._error_queue.put(f'rvrcm gui path [m] format error ({data})')
+                                                continue
 
-                            self.set_rover_info(rover_info)
+                                            try:
+                                                points = values[1].split('/')
+                                                rover_info.center_line = Line(
+                                                    int(points[0]), int(points[1]), int(points[2]), int(points[3])
+                                                )
+                                            
+                                            except IndexError:
+                                                pass
+
+                                        case 'p':
+                                            rover_info.lines = []
+
+                                            if len(values) > 1:
+                                                for line in values[1:]:
+                                                    points = line.split('/')
+
+                                                    rover_info.lines.append(
+                                                        Line(int(points[0]), int(points[1]), int(points[2]), int(points[3]))
+                                                    )
+
+                                        case 'd':
+                                            rover_info.distance = 0.0
+
+                                            if len(values) > 2:
+                                                self._error_queue.put(f'rvrcm gui distance [d] format error ({data})')
+                                                continue
+
+                                            try:        
+                                                rover_info.distance = float(values[1])
+                                            except IndexError:
+                                                pass
+
+                                        case 'b':
+                                            rover_info.battery = False
+                                            rover_info.battery_warning = 0
+                                            rover_info.voltage = 0.0
+                                            rover_info.amps = 0.0
+                                            rover_info.battery_remaining = 0.0
+                                            rover_info.run_time_left = 0
+
+                                            if len(values) > 2:
+                                                self._error_queue.put(f'rvrcm gui battery [b] format error ({data})')
+                                                continue
+
+                                            try:
+                                                battery = values[1].split('/')
+
+                                                if len(battery) != 6:
+                                                    self._error_queue.put(f'rvrcm gui battery [b] format error ({data})')
+                                                    continue
+
+                                                rover_info.battery = battery[0] == '1'
+                                                rover_info.battery_warning = int(battery[1])
+                                                rover_info.voltage = float(battery[2])
+                                                rover_info.amps = float(battery[3])
+                                                rover_info.battery_remaining = float(battery[4])
+                                                rover_info.run_time_left = int(battery[5])
+                                            except IndexError:
+                                                pass
+
+                                        case 't':
+                                            rover_info.text = None
+
+                                            if len(gui_data) >= 2:
+                                                rover_info.text = gui_data[2:]
+
+                                    self.set_rover_info(rover_info)
+
+                                case 'cli':
+                                    print(command[2])
+
+                                case 'var':
+                                    pass
                         
                         time.sleep(0.1)
 
