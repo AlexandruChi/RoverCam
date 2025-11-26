@@ -24,12 +24,11 @@ window = None
 command = None
 
 commands = {
-    'START': [b'nxpcup_work start\n',],
-    'STOP': [b'nxpcup_work stop\n',],
-
-    'N': [b'nxpcup_work n\n',],
-    'D': [b'nxpcup_work d\n',],
-    'B': [b'nxpcup_work b\n',],
+    'R': b'rover_pos_control mode R\r\n',
+    'N': b'rover_pos_control mode N\r\n',
+    'D': b'rover_pos_control mode D\r\n',
+    'L': b'rover_pos_control mode L\r\n',
+    'B': b'rover_pos_control mode B\r\n'
 }
 
 # Call window.close() on Ctrl + C
@@ -71,7 +70,7 @@ def on_select(port, baud):
         window.unlock() if window is not None else None
 
     camera = RoverCam(master=window, scale=15, text_size=20, recv=connection.get_rover_info, connected=connection.connected, on_close=on_close)
-    command = RoverCommand(master=camera, commands=commands, send=None, connected=connection.connected)
+    command = RoverCommand(master=camera, commands=commands, send=connection.send, connected=connection.connected)
 
 
 window = SerialPorts(title='Rover Serial Ports', on_select=on_select, on_close=lambda: globals().update({'window': None}))

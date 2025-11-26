@@ -1,7 +1,7 @@
 import tkinter as tk
 from RoverInfo import RoverInfo
 
-FPS = 60
+FPS = 30
 
 WIDTH = 78
 HEIGHT = 51
@@ -157,13 +157,13 @@ class RoverCam(tk.Toplevel):
             fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
         )
 
-        if self.roverInfo.gear == 'M':
+        if self.roverInfo.gear == 'L':
             colour = 'red'
         else:
             colour = 'grey'
 
         self.canvas.create_text(
-            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - int(self.text_size * 1.5), text='M',
+            WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale - int(self.text_size * 1.5), text='L',
             fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
         )
 
@@ -176,6 +176,33 @@ class RoverCam(tk.Toplevel):
             WIDTH * self.scale - self.text_size // 2, HEIGHT * self.scale, text='B',
             fill=colour, anchor='se', font=('Courier New', self.text_size * 2, 'bold')
         )
+
+        match self.roverInfo.state:
+            case 0: # OFF
+                state_text = 'OFF'
+                colour = 'gray'
+            
+            case 1: # SFW
+                state_text = 'SFW'
+                colour = 'blue'
+
+            case 2: # DFW
+                state_text = 'DFW'
+                colour = 'green'
+
+            case 3: # SRW
+                state_text = 'SRW'
+                colour = 'orange'
+
+            case 4: # DRW
+                state_text = 'DRW'
+                colour = 'red'
+
+        self.canvas.create_text(
+            WIDTH * self.scale - self.text_size * 5, HEIGHT * self.scale, text=state_text,
+            fill=colour, anchor='se', font=('Charter', int(self.text_size * 1.5), 'bold')
+        )
+
 
         if not self.connected() if self.connected else False:
             self.canvas.create_text(

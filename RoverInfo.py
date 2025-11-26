@@ -12,7 +12,8 @@ class RoverInfo:
             speed: float = 0.0, steer: float = 0.0, braking: bool = False,
             lines=None, text=None, distance: float = 0.0, gear = None, 
             battery: bool = False, battery_warning: int = 0, voltage: float = 0.0,
-            amps: float = 0.0, battery_remaining: float = 0.0, run_time_left: int = 0
+            amps: float = 0.0, battery_remaining: float = 0.0, run_time_left: int = 0,
+            state: int = 0
     ):
         self.lines = [] if lines is None else list(lines)
         self.line_left = line_left
@@ -25,6 +26,7 @@ class RoverInfo:
         self.braking = braking
         self.distance = distance
         self.gear = gear
+        self.state = state
 
         self.text = text
 
