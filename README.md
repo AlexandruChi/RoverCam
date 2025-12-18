@@ -1,0 +1,1 @@
+socat -d -d pty,raw,echo=0 TCP:192.168.4.1:50000
