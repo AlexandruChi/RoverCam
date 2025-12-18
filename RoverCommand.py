@@ -26,6 +26,10 @@ class RoverCommand(tk.Toplevel):
             for name, command in self.commands.items():
                 ttk.Button(frame, text=name, command=lambda cmd=command: self.send(cmd)).pack(fill='x')
 
+        self.custom = tk.StringVar()
+        self.textbox = ttk.Entry(self, textvariable=self.custom).pack(fill='x')
+        self.sendButton = ttk.Button(self, text="send", command=lambda: self.send(self.custom.get().encode() + b'\r\n') if len(self.custom.get()) > 0 else None).pack(fill='x')
+
     def send(self, command):
         if self.send_func is None:
             messagebox.showwarning('Warning', "Can't send commands")

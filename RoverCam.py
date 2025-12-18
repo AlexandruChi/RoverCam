@@ -190,13 +190,22 @@ class RoverCam(tk.Toplevel):
                 state_text = 'DFW'
                 colour = 'green'
 
-            case 3: # SRW
-                state_text = 'SRW'
+            case 3: # SWR
+                state_text = 'SWR'
                 colour = 'orange'
 
-            case 4: # DRW
+            case 4: # SRW
+                state_text = 'SRW'
+                colour = 'purple'
+
+            case 5: #DRW
                 state_text = 'DRW'
                 colour = 'red'
+
+            case _:
+                state_text = 'UNK'
+                colour = 'black'
+                
 
         self.canvas.create_text(
             WIDTH * self.scale - self.text_size * 5, HEIGHT * self.scale, text=state_text,
