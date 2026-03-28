@@ -15,20 +15,30 @@ elif sys.platform == 'darwin':
     SCALE = 15
     TEXT_SIZE = 20
 else:
-    # 900p screen linux default
-    SCALE = 15
+    SCALE = 20
     TEXT_SIZE = 10
+
+    # 900p screen linux default
+    # SCALE = 15
+    # TEXT_SIZE = 10
 
 connection = None
 window = None
 command = None
 
 commands = {
-    'R': b'rover_pos_control mode R\r\n',
-    'N': b'rover_pos_control mode N\r\n',
-    'D': b'rover_pos_control mode D\r\n',
-    'L': b'rover_pos_control mode L\r\n',
-    'B': b'rover_pos_control mode B\r\n'
+    'drive R': b'rover_pos_control mode R\r\n',
+    'drive N': b'rover_pos_control mode N\r\n',
+    'drive D': b'rover_pos_control mode D\r\n',
+    'drive L': b'rover_pos_control mode L\r\n',
+    'drive B': b'rover_pos_control mode B\r\n',
+    '':'\r\n',
+    'steer A': b'rover_pos_control steer A\r\n',
+    'steer C': b'rover_pos_control steer C\r\n',
+    'steer L': b'rover_pos_control steer L\r\n',
+    'steer R': b'rover_pos_control steer R\r\n',
+    '':'\r\n',
+    'reboot': b'reboot\r\n'
 }
 
 # Call window.close() on Ctrl + C
@@ -69,7 +79,7 @@ def on_select(port, baud):
 
         window.unlock() if window is not None else None
 
-    camera = RoverCam(master=window, scale=15, text_size=20, recv=connection.get_rover_info, connected=connection.connected, on_close=on_close)
+    camera = RoverCam(master=window, scale=SCALE, text_size=TEXT_SIZE, recv=connection.get_rover_info, connected=connection.connected, on_close=on_close)
     command = RoverCommand(master=camera, commands=commands, send=connection.send, connected=connection.connected)
 
 

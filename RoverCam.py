@@ -1,7 +1,7 @@
 import tkinter as tk
 from RoverInfo import RoverInfo
 
-FPS = 30
+FPS = 60
 
 WIDTH = 78
 HEIGHT = 51
