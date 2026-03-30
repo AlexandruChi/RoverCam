@@ -3,6 +3,7 @@ from RoverConnection import RoverConnection
 from SerialPorts import SerialPorts
 from RoverCam import RoverCam
 from RoverCommand import RoverCommand
+from RoverControl import RoverControl
 import sys
 import signal
 
@@ -81,6 +82,7 @@ def on_select(port, baud):
 
     camera = RoverCam(master=window, scale=SCALE, text_size=TEXT_SIZE, recv=connection.get_rover_info, connected=connection.connected, on_close=on_close)
     command = RoverCommand(master=camera, commands=commands, send=connection.send, connected=connection.connected)
+    # control = RoverControl(master=camera, send=connection.send, connected=connection.connected)
 
 
 window = SerialPorts(title='Rover Serial Ports', on_select=on_select, on_close=lambda: globals().update({'window': None}))
